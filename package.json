@@ -1,0 +1,29 @@
+{
+    "name": "power-assessment-toolkit",
+    "version": "1.0.0",
+    "description": "A toolkit for assessing and comparing ProjectWise datasources.",
+    "main": "gui/backend.js",
+    "scripts": {
+        "start": "node gui/backend.js",
+        "dev": "nodemon"
+    },
+    "keywords": [
+        "powershell",
+        "projectwise",
+        "bentley"
+    ],
+    "author": "Anderson Mancebo",
+    "license": "ISC",
+    "dependencies": {
+        "express": "^4.19.2",
+        "ws": "^8.18.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.4"
+   
+    },
+    "overrides": {
+        "qs": "^6.16.0"
+    }    
+  
+ }
