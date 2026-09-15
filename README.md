@@ -66,6 +66,12 @@ A aplicação abre o dashboard em:
 http://localhost:3000
 ```
 
+Se a porta 3000 estiver ocupada, o app tenta automaticamente a próxima porta disponível. Também é possível forçar outra porta:
+
+```bash
+PORT=3001 npm start
+```
+
 ### Executar em modo desenvolvimento
 
 ```bash
@@ -110,6 +116,18 @@ A execução gera arquivos em `output/`, como:
 - `Comparison.csv`
 
 Também ficam logs em `logs/` para investigação detalhada.
+
+## Compatibilidade com versões do ProjectWise
+
+A ferramenta detecta automaticamente o modo de autenticação correto:
+
+- **Auto** (padrão): tenta login via Bentley IMS (ProjectWise CONNECT Edition) e, se falhar, tenta login nativo/Windows (versões clássicas do ProjectWise).
+- **BentleyIMS**: força autenticação via Bentley IMS.
+- **Native**: força autenticação nativa/Windows, sem IMS.
+
+O modo pode ser escolhido na interface web (campo "ProjectWise Authentication") ou fixado em `config/settings.json` através da chave `authMode`.
+
+Os cmdlets do módulo `PWPS_DAB` que variam entre versões (ex: hidratação em lote de pastas, colunas de ambiente, estados de workflow) já possuem fallback automático, então o toolkit continua funcionando mesmo que algum cmdlet específico não exista na versão instalada.
 
 ## Observações importantes
 

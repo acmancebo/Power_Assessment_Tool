@@ -10,7 +10,35 @@ const WebSocket = require('ws');
 const fs = require('fs');
 
 const app = express();
-const port = 3000;
+
+function getAvailablePort(startPort) {
+    const portsToTry = [];
+    const requestedPort = Number(process.env.PORT);
+
+    if (Number.isInteger(requestedPort) && requestedPort >= 0) {
+        portsToTry.push(requestedPort);
+    }
+
+    if (!portsToTry.length || requestedPort !== 0) {
+        const basePort = Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : startPort;
+        for (let offset = 0; offset < 20; offset += 1) {
+            portsToTry.push(basePort + offset);
+        }
+    }
+
+    for (const candidatePort of portsToTry) {
+        try {
+            const server = app.listen(candidatePort);
+            return { server, port: candidatePort };
+        } catch (error) {
+            if (error.code !== 'EADDRINUSE') {
+                throw error;
+            }
+        }
+    }
+
+    throw new Error(`No available port found starting from ${startPort}.`);
+}
 
 // --- Server Setup ---
 app.use(express.json());
@@ -28,10 +56,10 @@ app.use('/output', express.static(path.join(__dirname, '..', 'output'), {
     }
 }));
 
-const server = app.listen(port, () => {
-    console.log(`✅ Powe Assessment GUI is running.`);
-    console.log(`   Please open http://localhost:${port} in your web browser.`);
-});
+const { server, port } = getAvailablePort(3000);
+
+console.log(`✅ Powe Assessment GUI is running.`);
+console.log(`   Please open http://localhost:${port} in your web browser.`);
 
 const wss = new WebSocket.Server({ server });
 
@@ -54,7 +82,7 @@ function broadcast(data) {
 
 // Endpoint to trigger the PowerShell script
 app.post('/run', (req, res) => {
-    const { datasourceA, datasourceB, paths } = req.body;
+    const { datasourceA, datasourceB, paths, authMode } = req.body;
     const runId = Date.now().toString(); // Unique ID for this run
     const outputDir = path.join(__dirname, '..', 'output', runId);
 
@@ -71,6 +99,8 @@ app.post('/run', (req, res) => {
 
     const scriptPath = path.join(__dirname, '..', 'scripts', 'master.ps1');
     const pathsString = paths.replace(/\n/g, ';');
+    const allowedAuthModes = new Set(['Auto', 'BentleyIMS', 'Native']);
+    const resolvedAuthMode = allowedAuthModes.has(authMode) ? authMode : 'Auto';
 
     console.log(`Starting PowerShell script for runId: ${runId}`);
     // Pass runId in broadcast messages
@@ -88,6 +118,7 @@ app.post('/run', (req, res) => {
             '-DatasourceA', datasourceA,
             '-DatasourceB', datasourceB,
             '-Paths', pathsString,
+            '-AuthMode', resolvedAuthMode,
             '-RunOutputPath', outputDir // New parameter for isolated output
         ]
     );

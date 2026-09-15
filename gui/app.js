@@ -316,6 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             datasourceA: form.datasourceA.value,
             datasourceB: form.datasourceB.value,
             paths: form.paths.value,
+            authMode: form.authMode.value,
         };
         localStorage.setItem('assessmentInputs', JSON.stringify(inputs));
     }
@@ -327,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
             form.datasourceA.value = inputs.datasourceA || '';
             form.datasourceB.value = inputs.datasourceB || '';
             form.paths.value = inputs.paths || '';
+            form.authMode.value = inputs.authMode || 'Auto';
         }
 
         const darkMode = localStorage.getItem('darkMode') === 'true';

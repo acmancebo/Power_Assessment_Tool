@@ -25,6 +25,12 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Paths,
 
+    # Controls how ProjectWise authenticates: Auto (default, tries Bentley IMS then falls back
+    # to native/Windows login), BentleyIMS (CONNECT Edition only), or Native (older ProjectWise
+    # versions without IMS). Defaults to the value in config/settings.json when not provided.
+    [ValidateSet('Auto', 'BentleyIMS', 'Native')]
+    [string]$AuthMode,
+
     # This parameter is passed by the Node.js backend for parallel runs.
     # It defaults to the root output directory for manual execution.
     [string]$RunOutputPath
@@ -82,12 +88,18 @@ if (-not (Test-Path $configFile)) {
 }
 $script:config = Get-Configuration -ConfigPath $configFile
 
+# Resolve the authentication mode: explicit parameter wins, otherwise fall back to config, then 'Auto'.
+if (-not $AuthMode) {
+    $AuthMode = if ($script:config.authMode) { $script:config.authMode } else { 'Auto' }
+}
+
 Write-Log -Level Info -Message "=================================================="
 Write-Log -Level Info -Message " Powe Assessment Toolkit - Started"
 Write-Log -Level Info -Message "=================================================="
 Write-Log -Level Info -Message "Datasource A (Source): $DatasourceA"
 Write-Log -Level Info -Message "Datasource B (Target): $DatasourceB"
 Write-Log -Level Info -Message "Paths to Assess: $Paths"
+Write-Log -Level Info -Message "Authentication Mode: $AuthMode"
 
 try {
     Import-Module PWPS_DAB -ErrorAction Stop
@@ -117,11 +129,11 @@ try {
 
     # Check Datasource A connection
     Write-Log -Level Info "Checking connection to Datasource A: $DatasourceA"
-    Connect-PWDatasource -DatasourceName $DatasourceA
+    Connect-PWDatasource -DatasourceName $DatasourceA -AuthMode $AuthMode
     
     # Check Datasource B connection
     Write-Log -Level Info "Checking connection to Datasource B: $DatasourceB"
-    Connect-PWDatasource -DatasourceName $DatasourceB
+    Connect-PWDatasource -DatasourceName $DatasourceB -AuthMode $AuthMode
 
     # Set session to A for path validation
     [void](Set-PWSession -Datasource $DatasourceA)

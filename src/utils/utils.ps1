@@ -76,27 +76,59 @@ function Connect-PWDatasource {
     <#
     .SYNOPSIS
         Connects to a ProjectWise datasource with retry logic.
+    .DESCRIPTION
+        Supports multiple ProjectWise authentication styles so the toolkit works across
+        ProjectWise versions: CONNECT Edition (Bentley IMS) and classic/on-premise
+        installations (native ProjectWise or Windows credentials, no IMS).
+    .PARAMETER AuthMode
+        'Auto' (default) tries Bentley IMS first and falls back to native login.
+        'BentleyIMS' forces IMS-only login (ProjectWise CONNECT Edition).
+        'Native' forces native/Windows login (older ProjectWise versions without IMS).
     #>
     param(
-        [string]$DatasourceName
+        [string]$DatasourceName,
+        [ValidateSet('Auto', 'BentleyIMS', 'Native')]
+        [string]$AuthMode = 'Auto'
     )
-    Write-Log -Level 'Info' -Message "Attempting to connect to datasource '$DatasourceName'..."
-    for ($i = 1; $i -le $script:config.retryCount; $i++) {
-        try { # Adicionado -ErrorAction Stop para garantir que o catch seja acionado em caso de falha
-            if (New-PWLogin -DatasourceName $DatasourceName -BentleyIMS -UseGui -ErrorAction Stop) {
-                Write-Log -Level 'Info' -Message "Successfully connected to '$DatasourceName'."
-                return $true # Sucesso, sai da função
-            } 
-            # Se o usuário cancelar a GUI, New-PWLogin retorna $false mas não gera erro.
-            throw "User cancelled the login dialog."
-        }
-        catch {
-            Write-Log -Level 'Warn' -Message "Connection attempt $i failed. Error: $($_.Exception.Message)"
-            Start-Sleep -Seconds 5
+    Write-Log -Level 'Info' -Message "Attempting to connect to datasource '$DatasourceName' (AuthMode: $AuthMode)..."
+
+    # Build the ordered list of login strategies to attempt.
+    $strategies = switch ($AuthMode) {
+        'BentleyIMS' { , @{ Name = 'Bentley IMS'; UseIMS = $true } }
+        'Native'     { , @{ Name = 'Native/Windows'; UseIMS = $false } }
+        default      {
+            @(
+                @{ Name = 'Bentley IMS'; UseIMS = $true }
+                @{ Name = 'Native/Windows'; UseIMS = $false }
+            )
         }
     }
+
+    for ($i = 1; $i -le $script:config.retryCount; $i++) {
+        foreach ($strategy in $strategies) {
+            try {
+                $loginParams = @{
+                    DatasourceName = $DatasourceName
+                    UseGui         = $true
+                    ErrorAction    = 'Stop'
+                }
+                if ($strategy.UseIMS) { $loginParams['BentleyIMS'] = $true }
+
+                if (New-PWLogin @loginParams) {
+                    Write-Log -Level 'Info' -Message "Successfully connected to '$DatasourceName' using $($strategy.Name) authentication."
+                    return $true # Sucesso, sai da função
+                }
+                # Se o usuário cancelar a GUI, New-PWLogin retorna $false mas não gera erro.
+                throw "User cancelled the login dialog ($($strategy.Name))."
+            }
+            catch {
+                Write-Log -Level 'Warn' -Message "Connection attempt $i using $($strategy.Name) failed. Error: $($_.Exception.Message)"
+            }
+        }
+        Start-Sleep -Seconds 5
+    }
     # Se o loop terminar sem sucesso, encerra o script com uma mensagem clara.
-    Write-Log -Level 'Error' -Message "Failed to connect to datasource '$DatasourceName' after $($script:config.retryCount) attempts. Aborting script."
+    Write-Log -Level 'Error' -Message "Failed to connect to datasource '$DatasourceName' after $($script:config.retryCount) attempts using all supported authentication modes. Aborting script."
     exit 1 # Encerra o processo do PowerShell com um código de erro.
 }
 
@@ -111,7 +143,9 @@ function Test-Prerequisites {
     try {
         # We try to import the module. This is a more robust check than -ListAvailable.
         Import-Module -Name PWPS_DAB -ErrorAction Stop
-        Write-Log -Level Debug -Message "PWPS_DAB module imported successfully."
+        $moduleInfo = Get-Module -Name PWPS_DAB
+        $moduleVersion = if ($moduleInfo) { $moduleInfo.Version.ToString() } else { 'unknown' }
+        Write-Log -Level Info -Message "PWPS_DAB module imported successfully (version $moduleVersion). Some cmdlets may vary slightly between ProjectWise versions; the toolkit auto-detects and falls back when needed."
     }
     catch {
         # If import fails, provide a clear error message.

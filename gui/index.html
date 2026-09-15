@@ -33,6 +33,14 @@
                         <label for="paths">Folder Paths (one per line)</label>
                         <textarea id="paths" name="paths" rows="5" required placeholder="Folder 1\Subfolder&#10;Folder 2"></textarea>
                     </div>
+                    <div class="form-group">
+                        <label for="authMode">ProjectWise Authentication</label>
+                        <select id="authMode" name="authMode">
+                            <option value="Auto">Auto (recommended - works with any version)</option>
+                            <option value="BentleyIMS">Bentley IMS (ProjectWise CONNECT Edition)</option>
+                            <option value="Native">Native / Windows (classic ProjectWise)</option>
+                        </select>
+                    </div>
                     <button type="submit" id="run-button" class="btn-primary">
                         <span class="btn-text">Run Assessment</span>
                         <div class="spinner" style="display: none;"></div>
