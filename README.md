@@ -1,63 +1,130 @@
-# ProjectWise Assessment & Readiness Toolkit (Powe)
+# Power Assessment Tool
 
-**Version 1.0**
+Uma ferramenta para avaliação, comparação e classificação de ambientes ProjectWise com foco em readiness, riscos e dashboards executivos.
 
-## 🎯 Overview
+## Visão geral
 
-The ProjectWise Assessment & Readiness Toolkit is an enterprise-grade PowerShell-based solution designed to analyze, compare, and score ProjectWise datasources. It provides critical insights for migration planning, health checks, and data governance by generating executive-level dashboards and detailed reports.
+Este projeto combina:
 
-This tool performs a **read-only assessment** and does **NOT** perform any data migration or modification.
+- coleta de dados via PowerShell
+- comparação entre dois datasources
+- cálculo de score de readiness
+- geração de relatórios em CSV/JSON
+- dashboard interativo em HTML
+- interface web para execução e acompanhamento
 
-## ✨ Key Features
+A ferramenta é orientada para leitura e análise, não realiza migração de dados nem alterações no ambiente alvo.
 
-- **High-Performance Data Collection**: Efficiently gathers statistics from large ProjectWise environments (100GB+) without overloading memory, using a recursive, non-blocking approach.
-- **Intelligent Comparison Engine**: Compares two datasources to identify differences in folder structures, document counts, data volume, and metadata (workflows, environments).
-- **Risk & Readiness Scoring**: Calculates a quantitative score (0-100) to classify migration readiness as `Ready`, `Moderate Risk`, or `High Risk`.
-- **Executive Dashboards**: Generates a professional, interactive HTML dashboard with KPIs, charts (using Chart.js), and filterable data tables for clear visualization of assessment results.
-- **Robust Logging & Configuration**: Features a detailed logging system and external JSON configuration for adaptable, transparent execution.
+## Funcionalidades principais
 
----
+- coleta estruturada de informações de datasources
+- comparação de pastas, documentos e métricas
+- cálculo de score de risco e prontidão
+- geração de saída em JSON e CSV
+- dashboard web para visualização
+- logs detalhados para diagnóstico
+- execução por interface web ou script PowerShell
 
-## ⚙️ Prerequisites
+## Requisitos
 
-1.  **Windows PowerShell 5.1** or higher.
-2.  **ProjectWise Explorer Client** installed.
-3.  **`PWPS_DAB` PowerShell Module**: This is required for interacting with ProjectWise. Install it by running PowerShell as an Administrator:
-    ```powershell
-    Install-Module -Name PWPS_DAB -Scope CurrentUser -Force
-    ```
-4.  **Bentley IMS Account**: A user account with sufficient read permissions on the target datasources.
+### Obrigatórios
 
----
+- Windows 10/11
+- PowerShell 5.1 ou superior
+- Node.js 18+
+- npm
+- ProjectWise Explorer instalado
+- módulo PowerShell `PWPS_DAB` instalado
 
-## 🚀 Quick Start
+### Instalação do módulo ProjectWise
 
-1.  **Clone/Download the Toolkit**: Place the `Power_Assessment_Tool` folder in your desired location.
+Abra o PowerShell como administrador e rode:
 
-2.  **Configure Settings (Optional)**:
-    Open `config/settings.json` to adjust parameters like `batchSize` or `logLevel` if needed. The default settings are optimized for general use.
+```powershell
+Install-Module -Name PWPS_DAB -Scope CurrentUser -Force
+```
 
-3.  **Run the Assessment**:
-    Open a PowerShell terminal, navigate to the `scripts` directory, and execute the `master.ps1` script.
+## Clonagem e instalação
 
-    ```powershell
-    # Navigate to the scripts directory
-    cd "C:\Users\Anderson.Mancebo\OneDrive - Bentley Systems, Inc\Documents\ProjectWise Scripts and Apps\Power_Assessment_Tool\scripts"
+```bash
+git clone https://github.com/acmancebo/Power_Assessment_Tool.git
+cd Power_Assessment_Tool
+npm install
+```
 
-    # Execute the master script with your parameters
-    .\master.ps1 -DatasourceA "PWHOST:DatasourceA" -DatasourceB "PWHOST:DatasourceB" -Paths "Folder 1\Subfolder;Folder 2"
-    ```
+## Execução
 
-    **Parameters**:
-    - `-DatasourceA` (string): The full name of the source datasource (e.g., `pw.bentley.com:datasource1`).
-    - `-DatasourceB` (string): The full name of the target datasource.
-    - `-Paths` (string): A semicolon-separated list of root folder paths to analyze.
+### Iniciar a interface web
 
-4.  **Review the Output**:
-    - **Dashboard**: Once the script completes, open `dashboard/dashboard.html` in a web browser to view the interactive report.
-    - **Raw Data**: Check the `output/` folder for the generated `A.csv`, `B.csv`, `Comparison.csv`, and `Score.json` files.
-    - **Logs**: Review detailed execution logs in the `logs/` folder for troubleshooting.
+```bash
+npm start
+```
 
----
+A aplicação abre o dashboard em:
 
-© 2024. Designed for enterprise ProjectWise assessment.
+```text
+http://localhost:3000
+```
+
+### Executar em modo desenvolvimento
+
+```bash
+npm run dev
+```
+
+## Estrutura do projeto
+
+```text
+Power_Assessment_Tool/
+├── config/
+├── dashboard/
+├── gui/
+├── logs/
+├── output/
+├── scripts/
+├── src/
+├── app.js
+├── server.js
+├── package.json
+├── README.md
+├── LICENSE
+└── .gitignore
+```
+
+## Como usar
+
+1. Configure os dados de entrada em `config/settings.json` quando necessário.
+2. Execute a interface web com `npm start`.
+3. Informe os datasources A e B e os caminhos a analisar.
+4. Aguarde a execução do script PowerShell.
+5. Visualize os resultados em `dashboard/` e em `output/`.
+
+## Saídas
+
+A execução gera arquivos em `output/`, como:
+
+- `A.json`
+- `B.json`
+- `C.json`
+- `Score.json`
+- `Comparison.csv`
+
+Também ficam logs em `logs/` para investigação detalhada.
+
+## Observações importantes
+
+- O projeto depende de acesso ao ambiente ProjectWise e dos módulos corretamente instalados.
+- A execução precisa de permissões de leitura adequadas no datasource alvo.
+- O código foi pensado para análise e diagnóstico, não para alteração do ambiente.
+
+## Licença
+
+Este projeto está licenciado sob a licença MIT. Consulte o arquivo [LICENSE](LICENSE).
+
+## Repositório
+
+- GitHub: https://github.com/acmancebo/Power_Assessment_Tool
+
+## Autor
+
+Anderson Mancebo
