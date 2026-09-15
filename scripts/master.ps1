@@ -102,7 +102,7 @@ Write-Log -Level Info -Message "Paths to Assess: $Paths"
 Write-Log -Level Info -Message "Authentication Mode: $AuthMode"
 
 try {
-    Import-Module PWPS_DAB -ErrorAction Stop
+    Import-PWPSDabModule | Out-Null
 
     # Split the paths string into an array.
     # Crucially, trim whitespace and then any surrounding single or double quotes

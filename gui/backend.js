@@ -11,33 +11,28 @@ const fs = require('fs');
 
 const app = express();
 
-function getAvailablePort(startPort) {
-    const portsToTry = [];
-    const requestedPort = Number(process.env.PORT);
+// app.listen() fails asynchronously via the 'error' event, so port retries
+// must be event-driven rather than wrapped in a synchronous try/catch.
+function startServer(startPort, maxAttempts = 20) {
+    return new Promise((resolve, reject) => {
+        const requestedPort = Number(process.env.PORT);
+        const initialPort = Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : startPort;
 
-    if (Number.isInteger(requestedPort) && requestedPort >= 0) {
-        portsToTry.push(requestedPort);
-    }
-
-    if (!portsToTry.length || requestedPort !== 0) {
-        const basePort = Number.isInteger(requestedPort) && requestedPort > 0 ? requestedPort : startPort;
-        for (let offset = 0; offset < 20; offset += 1) {
-            portsToTry.push(basePort + offset);
-        }
-    }
-
-    for (const candidatePort of portsToTry) {
-        try {
+        const tryPort = (candidatePort, attemptsLeft) => {
             const server = app.listen(candidatePort);
-            return { server, port: candidatePort };
-        } catch (error) {
-            if (error.code !== 'EADDRINUSE') {
-                throw error;
-            }
-        }
-    }
+            server.once('listening', () => resolve({ server, port: candidatePort }));
+            server.once('error', (error) => {
+                server.removeAllListeners();
+                if (error.code === 'EADDRINUSE' && attemptsLeft > 0) {
+                    tryPort(candidatePort + 1, attemptsLeft - 1);
+                } else {
+                    reject(error);
+                }
+            });
+        };
 
-    throw new Error(`No available port found starting from ${startPort}.`);
+        tryPort(initialPort, maxAttempts);
+    });
 }
 
 // --- Server Setup ---
@@ -56,20 +51,10 @@ app.use('/output', express.static(path.join(__dirname, '..', 'output'), {
     }
 }));
 
-const { server, port } = getAvailablePort(3000);
-
-console.log(`✅ Powe Assessment GUI is running.`);
-console.log(`   Please open http://localhost:${port} in your web browser.`);
-
-const wss = new WebSocket.Server({ server });
-
-// --- WebSocket Connection Handling ---
-wss.on('connection', ws => {
-    console.log('Client connected to WebSocket.');
-    ws.on('close', () => console.log('Client disconnected.'));
-});
+let wss;
 
 function broadcast(data) {
+    if (!wss) return;
     wss.clients.forEach(client => {
         if (client.readyState === WebSocket.OPEN) {
             // Always send data as a stringified JSON object
@@ -77,6 +62,22 @@ function broadcast(data) {
         }
     });
 }
+
+startServer(3000).then(({ server, port }) => {
+    console.log(`✅ Powe Assessment GUI is running.`);
+    console.log(`   Please open http://localhost:${port} in your web browser.`);
+
+    wss = new WebSocket.Server({ server });
+
+    // --- WebSocket Connection Handling ---
+    wss.on('connection', ws => {
+        console.log('Client connected to WebSocket.');
+        ws.on('close', () => console.log('Client disconnected.'));
+    });
+}).catch((error) => {
+    console.error(`❌ Failed to start server: ${error.message}`);
+    process.exit(1);
+});
 
 // --- API Endpoints ---
 

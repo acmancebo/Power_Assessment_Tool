@@ -129,6 +129,30 @@ O modo pode ser escolhido na interface web (campo "ProjectWise Authentication") 
 
 Os cmdlets do módulo `PWPS_DAB` que variam entre versões (ex: hidratação em lote de pastas, colunas de ambiente, estados de workflow) já possuem fallback automático, então o toolkit continua funcionando mesmo que algum cmdlet específico não exista na versão instalada.
 
+### Erro "Client and server versions are incompatible" (código 58506)
+
+Esse erro **não é de autenticação** — ele ocorre no motor do ProjectWise antes mesmo do login ser processado. Significa que o **ProjectWise Explorer / módulo PWPS_DAB instalado na máquina é de uma versão diferente da esperada pelo servidor do datasource**.
+
+Como resolver:
+1. Verifique com o administrador do ProjectWise qual versão de cliente o servidor exige.
+2. Rode o script auxiliar para listar, instalar e fixar a versão compatível do `PWPS_DAB` (instala lado a lado, sem remover a versão atual):
+   ```powershell
+   cd scripts
+   .\Set-PWPSDabVersion.ps1
+   ```
+   Ou de forma direta, se já souber a versão exigida pelo servidor:
+   ```powershell
+   .\Set-PWPSDabVersion.ps1 -Version "10.00.02.10"
+   ```
+   Isso instala a versão e grava `pwpsDabVersion` em `config/settings.json`, fazendo com que toda execução futura carregue exatamente essa versão.
+3. Para apenas consultar as versões instaladas/disponíveis sem instalar nada:
+   ```powershell
+   .\Set-PWPSDabVersion.ps1 -ListOnly
+   ```
+4. Rode a avaliação novamente.
+
+Tentar de novo sem ajustar a versão do cliente não resolve — o toolkit já detecta esse erro e interrompe a execução imediatamente com essa orientação, em vez de ficar tentando repetidamente.
+
 ## Observações importantes
 
 - O projeto depende de acesso ao ambiente ProjectWise e dos módulos corretamente instalados.

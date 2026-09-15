@@ -72,6 +72,37 @@ function Get-Configuration {
     }
 }
 
+function Import-PWPSDabModule {
+    <#
+    .SYNOPSIS
+        Imports PWPS_DAB, honoring an optional version pinned in config/settings.json.
+    .DESCRIPTION
+        ProjectWise rejects logins with error 58506 ("Client and server versions are
+        incompatible") when the installed PWPS_DAB/Explorer client version doesn't match
+        what the datasource server expects. Setting 'pwpsDabVersion' in config/settings.json
+        (via scripts/Set-PWPSDabVersion.ps1) forces this exact version to be loaded every run.
+    #>
+    $pinnedVersion = $script:config.pwpsDabVersion
+    try {
+        if ($pinnedVersion) {
+            Import-Module -Name PWPS_DAB -RequiredVersion $pinnedVersion -ErrorAction Stop
+        }
+        else {
+            Import-Module -Name PWPS_DAB -ErrorAction Stop
+        }
+    }
+    catch {
+        if ($pinnedVersion) {
+            throw "PWPS_DAB version '$pinnedVersion' (pinned in config/settings.json) is not installed. Run '.\scripts\Set-PWPSDabVersion.ps1 -Version $pinnedVersion' to install it, or clear 'pwpsDabVersion' in config/settings.json. Error: $($_.Exception.Message)"
+        }
+        throw "Could not import the 'PWPS_DAB' module. Run 'Install-Module -Name PWPS_DAB -Scope CurrentUser -Force', or run '.\scripts\Set-PWPSDabVersion.ps1' to pick a version compatible with your ProjectWise server. Error: $($_.Exception.Message)"
+    }
+
+    $moduleInfo = Get-Module -Name PWPS_DAB
+    if ($moduleInfo) { return $moduleInfo.Version.ToString() }
+    return 'unknown'
+}
+
 function Connect-PWDatasource {
     <#
     .SYNOPSIS
@@ -122,7 +153,17 @@ function Connect-PWDatasource {
                 throw "User cancelled the login dialog ($($strategy.Name))."
             }
             catch {
-                Write-Log -Level 'Warn' -Message "Connection attempt $i using $($strategy.Name) failed. Error: $($_.Exception.Message)"
+                $errorMessage = $_.Exception.Message
+                Write-Log -Level 'Warn' -Message "Connection attempt $i using $($strategy.Name) failed. Error: $errorMessage"
+
+                # Error 58506 / "Client and server versions are incompatible" means the ProjectWise
+                # Explorer/PWPS_DAB client installed locally is a different version than the datasource
+                # server expects. Retrying with another auth mode will not help, so fail fast with guidance.
+                if ($errorMessage -match '(?i)incompatible|58506') {
+                    Write-Log -Level 'Error' -Message "ProjectWise reported a client/server version mismatch (Error 58506) while connecting to '$DatasourceName'. This is not an authentication problem - retrying will not help."
+                    Write-Log -Level 'Error' -Message "Fix: run '.\scripts\Set-PWPSDabVersion.ps1' to list and install a PWPS_DAB version compatible with this server (ask your ProjectWise administrator which version the server '$DatasourceName' requires), then try again."
+                    exit 1
+                }
             }
         }
         Start-Sleep -Seconds 5
@@ -139,17 +180,15 @@ function Test-Prerequisites {
     #>
     Write-Log -Level Info -Message "Verifying prerequisites..."
 
-    # 1. Check for PWPS_DAB module
+    # 1. Check for PWPS_DAB module (honors a pinned version from config/settings.json)
     try {
-        # We try to import the module. This is a more robust check than -ListAvailable.
-        Import-Module -Name PWPS_DAB -ErrorAction Stop
-        $moduleInfo = Get-Module -Name PWPS_DAB
-        $moduleVersion = if ($moduleInfo) { $moduleInfo.Version.ToString() } else { 'unknown' }
-        Write-Log -Level Info -Message "PWPS_DAB module imported successfully (version $moduleVersion). Some cmdlets may vary slightly between ProjectWise versions; the toolkit auto-detects and falls back when needed."
+        $moduleVersion = Import-PWPSDabModule
+        $pinnedNote = if ($script:config.pwpsDabVersion) { " (pinned via config/settings.json)" } else { "" }
+        Write-Log -Level Info -Message "PWPS_DAB module imported successfully (version $moduleVersion)$pinnedNote. Some cmdlets may vary slightly between ProjectWise versions; the toolkit auto-detects and falls back when needed."
     }
     catch {
         # If import fails, provide a clear error message.
-        throw "Prerequisite check failed: Could not import the 'PWPS_DAB' module. Please run 'Install-Module -Name PWPS_DAB -Scope CurrentUser -Force' in an Administrator PowerShell window. Error: $($_.Exception.Message)"
+        throw "Prerequisite check failed: $($_.Exception.Message)"
     }
 
     # 2. Check PowerShell Version (minimum 5.1 recommended)
