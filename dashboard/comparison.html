@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparison Report - Power Assessment Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Comparison Report (Source vs. Target)</h1>
+
+        <div id="nav-links" class="nav-links">
+            <!-- O conteúdo será preenchido pelo JavaScript -->
+        </div>
+
+        <div id="summary" class="summary-panel">
+            <!-- O conteúdo será preenchido pelo JavaScript -->
+        </div>
+
+        <div class="comparison-grid">
+            <div id="environments-comparison" class="config-card">
+                <div class="config-card-header"><h3>Environments Comparison</h3></div>
+                <div id="environments-body" class="config-card-body"></div>
+            </div>
+
+            <div id="workflows-comparison" class="config-card">
+                <div class="config-card-header"><h3>Workflows & States Comparison</h3></div>
+                <div id="workflows-body" class="config-card-body"></div>
+            </div>
+        </div>
+
+        <div class="comparison-section">
+            <h2>Folder Structure Check in Target</h2>
+            <div id="folders-table-container" class="table-container"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+    <script src="comparison.js"></script>
+</body>
+</html>

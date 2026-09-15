@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectWise Assessment Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ProjectWise Assessment Tool</h1>
+            <div class="theme-switcher">
+                <label for="theme-toggle">Dark Mode</label>
+                <input type="checkbox" id="theme-toggle">
+            </div>
+        </header>
+
+        <main class="main-grid">
+            <!-- Input Panel -->
+            <div class="card" id="input-panel">
+                <h2>1. Assessment Inputs</h2>
+                <form id="assessment-form">
+                    <div class="form-group">
+                        <label for="datasourceA">Datasource A (Source)</label>
+                        <input type="text" id="datasourceA" name="datasourceA" required placeholder="e.g., pw.bentley.com:datasource-a">
+                    </div>
+                    <div class="form-group">
+                        <label for="datasourceB">Datasource B (Target)</label>
+                        <input type="text" id="datasourceB" name="datasourceB" required placeholder="e.g., pw.bentley.com:datasource-b">
+                    </div>
+                    <div class="form-group">
+                        <label for="paths">Folder Paths (one per line)</label>
+                        <textarea id="paths" name="paths" rows="5" required placeholder="Folder 1\Subfolder&#10;Folder 2"></textarea>
+                    </div>
+                    <button type="submit" id="run-button" class="btn-primary">
+                        <span class="btn-text">Run Assessment</span>
+                        <div class="spinner" style="display: none;"></div>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="card" id="results-panel">
+                <h2>2. Assessment Results</h2>
+                <div id="results-content" class="results-grid" style="display: none;">
+                    <div class="kpi-card">
+                        <h3>Readiness Score</h3>
+                        <p class="kpi-value" id="result-score">0</p>
+                    </div>
+                    <div class="kpi-card">
+                        <h3>Classification</h3>
+                        <p class="kpi-classification" id="result-classification">N/A</p>
+                    </div>
+                    <div class="kpi-card">
+                        <h3>Folders Analyzed</h3>
+                        <p class="kpi-value" id="result-folders">0</p>
+                    </div>
+                    <div class="kpi-card">
+                        <h3>Folders with Issues</h3>
+                        <p class="kpi-value" id="result-issues">0</p>
+                    </div>
+                </div>
+                <div id="results-placeholder">
+                    <p>Results will be displayed here after the assessment is complete.</p>
+                </div>
+                <button id="dashboard-button" class="btn-secondary" style="display: none;">
+                    Open Executive Dashboard
+                </button>
+            </div>
+        </main>
+
+        <!-- Log and Progress Panel -->
+        <div class="card" id="log-panel">
+            <h2>3. Progress & Logs</h2>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div id="status-message">Ready to start.</div>
+            <div class="log-controls">
+                <label for="log-selector">View Historical Log:</label>
+                <select id="log-selector">
+                    <option value="">Live Log</option>
+                </select>
+            </div>
+            <pre id="log-output">
+                <!-- Logs will be streamed here -->
+            </pre>
+        </div>
+
+        <!-- History Panel -->
+        <div class="card" id="history-panel">
+            <h2>Past Assessments</h2>
+            <div id="history-list-container">
+                <p id="history-placeholder">No past assessments found. Run one to get started.</p>
+                <ul id="history-list"></ul>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

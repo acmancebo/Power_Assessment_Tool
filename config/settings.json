@@ -1,0 +1,5 @@
+{
+  "batchSize": 5000,
+  "retryCount": 3,
+  "logLevel": "Info"
+}

@@ -1,0 +1,8 @@
+{
+  "watch": [
+    "gui/"
+  ],
+  "ext": "js,json",
+  "ignore": ["output/*", "logs/*"],
+  "exec": "node gui/backend.js"
+}
