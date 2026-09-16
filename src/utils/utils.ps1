@@ -106,13 +106,16 @@ function Import-PWPSDabModule {
 function Connect-PWDatasource {
     <#
     .SYNOPSIS
-        Connects to a ProjectWise datasource with retry logic.
+        Connects to a ProjectWise datasource with a single login attempt.
     .DESCRIPTION
-        Supports multiple ProjectWise authentication styles so the toolkit works across
-        ProjectWise versions: CONNECT Edition (Bentley IMS) and classic/on-premise
-        installations (native ProjectWise or Windows credentials, no IMS).
+        Performs exactly ONE New-PWLogin call. The native ProjectWise login dialog
+        (-UseGui) already lets the user pick the authentication method (Bentley IMS or
+        Windows/native) interactively, so retrying with different auth modes automatically
+        only produces repeated, confusing login popups and never fixes a real problem.
+        Most connection failures for a mismatched client are version issues (error 58506),
+        not authentication issues - see Import-PWPSDabModule / scripts/Set-PWPSDabVersion.ps1.
     .PARAMETER AuthMode
-        'Auto' (default) tries Bentley IMS first and falls back to native login.
+        'Auto' (default) lets the login dialog's own Authentication dropdown decide.
         'BentleyIMS' forces IMS-only login (ProjectWise CONNECT Edition).
         'Native' forces native/Windows login (older ProjectWise versions without IMS).
     #>
@@ -121,56 +124,39 @@ function Connect-PWDatasource {
         [ValidateSet('Auto', 'BentleyIMS', 'Native')]
         [string]$AuthMode = 'Auto'
     )
-    Write-Log -Level 'Info' -Message "Attempting to connect to datasource '$DatasourceName' (AuthMode: $AuthMode)..."
+    Write-Log -Level 'Info' -Message "Connecting to datasource '$DatasourceName' (AuthMode: $AuthMode)..."
 
-    # Build the ordered list of login strategies to attempt.
-    $strategies = switch ($AuthMode) {
-        'BentleyIMS' { , @{ Name = 'Bentley IMS'; UseIMS = $true } }
-        'Native'     { , @{ Name = 'Native/Windows'; UseIMS = $false } }
-        default      {
-            @(
-                @{ Name = 'Bentley IMS'; UseIMS = $true }
-                @{ Name = 'Native/Windows'; UseIMS = $false }
-            )
-        }
+    $loginParams = @{
+        DatasourceName = $DatasourceName
+        UseGui         = $true
+        ErrorAction    = 'Stop'
     }
+    # 'Native' intentionally omits -BentleyIMS. 'Auto' also omits it and leaves the choice
+    # to the login dialog's Authentication dropdown, which already supports both methods.
+    if ($AuthMode -eq 'BentleyIMS') { $loginParams['BentleyIMS'] = $true }
 
-    for ($i = 1; $i -le $script:config.retryCount; $i++) {
-        foreach ($strategy in $strategies) {
-            try {
-                $loginParams = @{
-                    DatasourceName = $DatasourceName
-                    UseGui         = $true
-                    ErrorAction    = 'Stop'
-                }
-                if ($strategy.UseIMS) { $loginParams['BentleyIMS'] = $true }
-
-                if (New-PWLogin @loginParams) {
-                    Write-Log -Level 'Info' -Message "Successfully connected to '$DatasourceName' using $($strategy.Name) authentication."
-                    return $true # Sucesso, sai da função
-                }
-                # Se o usuário cancelar a GUI, New-PWLogin retorna $false mas não gera erro.
-                throw "User cancelled the login dialog ($($strategy.Name))."
-            }
-            catch {
-                $errorMessage = $_.Exception.Message
-                Write-Log -Level 'Warn' -Message "Connection attempt $i using $($strategy.Name) failed. Error: $errorMessage"
-
-                # Error 58506 / "Client and server versions are incompatible" means the ProjectWise
-                # Explorer/PWPS_DAB client installed locally is a different version than the datasource
-                # server expects. Retrying with another auth mode will not help, so fail fast with guidance.
-                if ($errorMessage -match '(?i)incompatible|58506') {
-                    Write-Log -Level 'Error' -Message "ProjectWise reported a client/server version mismatch (Error 58506) while connecting to '$DatasourceName'. This is not an authentication problem - retrying will not help."
-                    Write-Log -Level 'Error' -Message "Fix: run '.\scripts\Set-PWPSDabVersion.ps1' to list and install a PWPS_DAB version compatible with this server (ask your ProjectWise administrator which version the server '$DatasourceName' requires), then try again."
-                    exit 1
-                }
-            }
+    try {
+        if (New-PWLogin @loginParams) {
+            Write-Log -Level 'Info' -Message "Successfully connected to '$DatasourceName'."
+            return $true
         }
-        Start-Sleep -Seconds 5
+        throw "Login was cancelled or did not complete."
     }
-    # Se o loop terminar sem sucesso, encerra o script com uma mensagem clara.
-    Write-Log -Level 'Error' -Message "Failed to connect to datasource '$DatasourceName' after $($script:config.retryCount) attempts using all supported authentication modes. Aborting script."
-    exit 1 # Encerra o processo do PowerShell com um código de erro.
+    catch {
+        $errorMessage = $_.Exception.Message
+
+        # Error 58506 / "Client and server versions are incompatible" means the installed
+        # PWPS_DAB/Explorer client is a different version than the datasource server expects.
+        # This is not an authentication problem, so retrying the login will never help.
+        if ($errorMessage -match '(?i)incompatible|58506') {
+            Write-Log -Level 'Error' -Message "ProjectWise reported a client/server version mismatch (Error 58506) while connecting to '$DatasourceName'."
+            Write-Log -Level 'Error' -Message "Fix: run '.\scripts\Set-PWPSDabVersion.ps1' to check the installed PWPS_DAB version and install one compatible with this server (ask your ProjectWise administrator which version it requires)."
+        }
+        else {
+            Write-Log -Level 'Error' -Message "Failed to connect to '$DatasourceName'. Error: $errorMessage"
+        }
+        exit 1 # Encerra o processo do PowerShell com um código de erro.
+    }
 }
 
 function Test-Prerequisites {
@@ -181,10 +167,18 @@ function Test-Prerequisites {
     Write-Log -Level Info -Message "Verifying prerequisites..."
 
     # 1. Check for PWPS_DAB module (honors a pinned version from config/settings.json)
+    # Surfaced BEFORE any login attempt: version mismatches (error 58506) are the most
+    # common connection failure and are never fixed by retrying the login dialog.
     try {
         $moduleVersion = Import-PWPSDabModule
-        $pinnedNote = if ($script:config.pwpsDabVersion) { " (pinned via config/settings.json)" } else { "" }
-        Write-Log -Level Info -Message "PWPS_DAB module imported successfully (version $moduleVersion)$pinnedNote. Some cmdlets may vary slightly between ProjectWise versions; the toolkit auto-detects and falls back when needed."
+        $pinnedNote = if ($script:config.pwpsDabVersion) { " (pinned via config/settings.json)" } else { " (not pinned - using default installed version)" }
+        Write-Log -Level Info -Message "=================================================="
+        Write-Log -Level Info -Message " PWPS_DAB client version: $moduleVersion$pinnedNote"
+        Write-Log -Level Info -Message " If login fails with 'Client and server versions are"
+        Write-Log -Level Info -Message " incompatible' (error 58506), do NOT retry the login."
+        Write-Log -Level Info -Message " Run .\scripts\Set-PWPSDabVersion.ps1 to install the"
+        Write-Log -Level Info -Message " version your ProjectWise server requires."
+        Write-Log -Level Info -Message "=================================================="
     }
     catch {
         # If import fails, provide a clear error message.

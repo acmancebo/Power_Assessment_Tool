@@ -25,9 +25,12 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Paths,
 
-    # Controls how ProjectWise authenticates: Auto (default, tries Bentley IMS then falls back
-    # to native/Windows login), BentleyIMS (CONNECT Edition only), or Native (older ProjectWise
-    # versions without IMS). Defaults to the value in config/settings.json when not provided.
+    # Controls how ProjectWise authenticates: Auto (default, lets the native login dialog's own
+    # Authentication dropdown decide), BentleyIMS (forces CONNECT Edition IMS login), or Native
+    # (forces Windows/native login for older ProjectWise versions). Only ONE login attempt is
+    # made per datasource - most connection failures are PWPS_DAB version mismatches (error
+    # 58506), not authentication issues, and retrying the login dialog never fixes those.
+    # Defaults to the value in config/settings.json when not provided.
     [ValidateSet('Auto', 'BentleyIMS', 'Native')]
     [string]$AuthMode,
 

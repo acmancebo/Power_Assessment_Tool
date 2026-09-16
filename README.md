@@ -119,11 +119,13 @@ Também ficam logs em `logs/` para investigação detalhada.
 
 ## Compatibilidade com versões do ProjectWise
 
-A ferramenta detecta automaticamente o modo de autenticação correto:
+A ferramenta verifica e exibe a versão do módulo `PWPS_DAB` **antes** de tentar qualquer login, já que a maioria das falhas de conexão é causada por incompatibilidade de versão entre cliente e servidor — não por autenticação.
 
-- **Auto** (padrão): tenta login via Bentley IMS (ProjectWise CONNECT Edition) e, se falhar, tenta login nativo/Windows (versões clássicas do ProjectWise).
-- **BentleyIMS**: força autenticação via Bentley IMS.
-- **Native**: força autenticação nativa/Windows, sem IMS.
+- **Auto** (padrão): faz uma única tentativa de login e deixa o próprio dropdown "Authentication" do diálogo nativo do ProjectWise decidir entre Bentley IMS ou Windows/nativo.
+- **BentleyIMS**: força login via Bentley IMS.
+- **Native**: força login nativo/Windows, sem IMS.
+
+Importante: o toolkit faz **apenas uma tentativa de login** por datasource. Repetir o login automaticamente com métodos diferentes não resolve problemas de versão incompatível — só gera múltiplos popups sem necessidade.
 
 O modo pode ser escolhido na interface web (campo "ProjectWise Authentication") ou fixado em `config/settings.json` através da chave `authMode`.
 
